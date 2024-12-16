@@ -129,6 +129,7 @@ def get_online_data(query):
                 "Ммм, я постараюсь помочь... но если что-то пойдет не так, просто скажи мне, и я исправлю.",
                 "Ну что ж, давай посмотрим... если что-то будет не так, просто не сердись, я попробую еще раз!"
             ])
+
 def analyze_user_message(query):
     # Фразы для поддержания разговора
     if any(word in query.lower() for word in ["как ты", "что думаешь", "мнение", "интересно"]):
@@ -197,52 +198,18 @@ if "dialog_initialized" not in st.session_state:
             if line.startswith("Вы: "):
                 dialog_history.append({"user": line[4:], "bot": None})
             elif line.startswith("PersoComp: "):
-                if dialog_history:
-                    dialog_history[-1]["bot"] = line[11:]
+                dialog_history[-1]["bot"] = line[11:]
         st.session_state.dialog_initialized = True
-        st.session_state.dialog_history = dialog_history
-        st.success("Начальный диалог сохранён!")
+        st.success("Начальный диалог сохранён.")
 
-# Ввод в интерактивном режиме
 if st.session_state.dialog_initialized:
-    user_input = st.text_input("Вы: ", key="user_input")
-    if st.button("Отправить"):
-        dialog_history = st.session_state.dialog_history
-        dialog_history.append({"user": user_input, "bot": None})
-        if any(keyword in user_input.lower() for keyword in ["новости", "погода", "определение", "метод"]):
-            bot_response = get_online_data(user_input)
-        else:
+    user_input = st.text_input("Введите ваш вопрос:", key="user_input")
+    if user_input:
+        # Анализируем и генерируем ответ
+        response = analyze_user_message(user_input)
+        if not response:
             prompt = " ".join([f"Вы: {entry['user']} PersoComp: {entry['bot']}" for entry in dialog_history if entry["bot"]])
-            bot_response = generate_response(prompt)
-        dialog_history[-1]["bot"] = bot_response
-        st.session_state.dialog_history = dialog_history
-        st.write(f"PersoComp: {bot_response}")
-        speak_text(bot_response)
-
-# Инициализация сессии и диалога
-if 'dialog_history' not in st.session_state:
-    st.session_state.dialog_history = []
-    st.session_state.dialog_initialized = True
-
-# Показ истории
-if st.session_state.dialog_initialized:
-    user_input = st.text_input("Вы: ", key="user_input")
-    if st.button("Отправить"):
-        dialog_history = st.session_state.dialog_history
-        dialog_history.append({"user": user_input, "bot": None})
-
-        # Обработка запроса с определенными ключевыми словами
-        if any(keyword in user_input.lower() for keyword in ["новости", "погода", "определение", "метод"]):
-            bot_response = get_online_data(user_input)
-        else:
-            # Формируем запрос для модели, используя историю диалога
-            prompt = " ".join([f"Вы: {entry['user']} PersoComp: {entry['bot']}" for entry in dialog_history if entry["bot"]])
-            bot_response = generate_response(prompt)
-        
-        # Обновляем историю диалога
-        dialog_history[-1]["bot"] = bot_response
-        st.session_state.dialog_history = dialog_history
-        
-        # Выводим и озвучиваем ответ
-        st.write(f"PersoComp: {bot_response}")
-        speak_text(bot_response)  # Воспроизведение аудио
+            response = generate_response(prompt)
+        dialog_history.append({"user": user_input, "bot": response})
+        st.text_area("Ответ PersoComp:", value=response, height=100)
+        speak_text(response)
