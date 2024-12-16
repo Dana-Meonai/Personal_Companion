@@ -190,6 +190,13 @@ def analyze_user_message(query):
         # Обработка исключений
         return f"Ошибка обработки запроса: {str(e)}"
 
+# Streamlit interface
+st.title("Анализатор сообщений")
+query = st.text_input("Введите сообщение:")
+if st.button("Анализировать"):
+    response = analyze_user_message(query)
+    st.write(response)
+
 
 # Функция для голосового вывода
 def speak_text(text):
