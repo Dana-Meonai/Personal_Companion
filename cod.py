@@ -5,6 +5,8 @@ import streamlit as st
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import torch
 from gtts import gTTS
+import openai
+import requests
 
 # Проверка библиотек
 try:
@@ -15,7 +17,7 @@ except ImportError as e:
     print(e)
     exit(1)
 
-openai.api_key = 'your_openai_api_key'
+openai.api_key = 'your_openai_api_key'  # Убедитесь, что ваш ключ API корректен
 
 # Загрузка модели и токенизатора
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
@@ -25,6 +27,10 @@ model.to(device)
 
 # Устанавливаем pad_token_id, если он отсутствует
 tokenizer.pad_token = tokenizer.eos_token
+
+# Инициализация истории диалога в сессии Streamlit
+if "dialog_history" not in st.session_state:
+    st.session_state.dialog_history = []
 
 # Функция для обработки текста
 def process_text(text):
@@ -191,7 +197,6 @@ if st.button("Анализировать"):
     st.write(response)
 
 
-# Функция для голосового вывода
 def speak_text(text):
     tts = gTTS(text, lang="ru")
     tts.save("response.mp3")
@@ -208,9 +213,9 @@ if "dialog_initialized" not in st.session_state:
         initial_dialog = st.session_state.initial_dialog_input.split("\n")
         for line in initial_dialog:
             if line.startswith("Вы: "):
-                dialog_history.append({"user": line[4:], "bot": None})
+                st.session_state.dialog_history.append({"user": line[4:], "bot": None})
             elif line.startswith("PersoComp: "):
-                dialog_history[-1]["bot"] = line[11:]
+                st.session_state.dialog_history[-1]["bot"] = line[11:]
         st.session_state.dialog_initialized = True
         st.success("Начальный диалог сохранён.")
 
@@ -218,10 +223,7 @@ if st.session_state.dialog_initialized:
     user_input = st.text_input("Введите ваш вопрос:", key="user_input")
     if user_input:
         # Анализируем и генерируем ответ
-        response = analyze_user_message(user_input)
-        if not response:
-            prompt = " ".join([f"Вы: {entry['user']} PersoComp: {entry['bot']}" for entry in dialog_history if entry["bot"]])
-            response = generate_response(prompt)
-        dialog_history.append({"user": user_input, "bot": response})
+        response = generate_response(" ".join([f"Вы: {entry['user']} PersoComp: {entry['bot']}" for entry in st.session_state.dialog_history if entry["bot"]]))
+        st.session_state.dialog_history.append({"user": user_input, "bot": response})
         st.text_area("Ответ PersoComp:", value=response, height=100)
         speak_text(response)
