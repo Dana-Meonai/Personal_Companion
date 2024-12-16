@@ -15,6 +15,8 @@ except ImportError as e:
     print(e)
     exit(1)
 
+openai.api_key = 'your_openai_api_key'
+
 # Загрузка модели и токенизатора
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 model = GPT2LMHeadModel.from_pretrained("gpt2")
@@ -37,17 +39,13 @@ def validate_text(text):
 # Функция генерации ответа
 def generate_response(prompt):
     try:
-        inputs = tokenizer.encode(prompt, return_tensors="pt").to(device)
-        outputs = model.generate(
-            inputs,
-            max_length=150,
-            num_return_sequences=1,
-            no_repeat_ngram_size=2,
+        response = openai.Completion.create(
+            engine="text-davinci-003",  # Выберите нужную модель
+            prompt=prompt,
             temperature=0.7,
-            pad_token_id=tokenizer.pad_token_id,
+            max_tokens=150
         )
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return response
+        return response.choices[0].text.strip()
     except Exception as e:
         return f"Ошибка генерации: {str(e)}"
 
@@ -89,43 +87,48 @@ def interactive_chat():
 
 # Функция для получения данных из интернета
 def get_online_data(query):
-    if "погода" in query.lower():
-        return random.choice([
-            "Погода может быть непредсказуемой, но я постараюсь уточнить для тебя.",
-            "Сейчас я посмотрю прогноз... дай мне секундочку!",
-            "Хочешь знать, тепло ли сегодня? Я проверю!",
-            "Похоже, сегодня лучше взять зонт. Но я уточню!",
-            "Думаю, погода сегодня будет отличной для прогулки. Сейчас уточню."
-        ])
-    elif "новости" in query.lower():
-        return random.choice([
-            "Мир не стоит на месте. Сейчас я найду что-то интересное для тебя.",
-            "Давай посмотрим, что происходит вокруг. Новости уже на подходе!",
-            "Я люблю узнавать новое. Сейчас поделюсь с тобой свежими новостями!",
-            "Минуточку, посмотрю, что нового в мире.",
-            "В новостях всегда что-то происходит. Хочешь узнать, что именно?"
-        ])
-    elif "определение" in query.lower() or "метод" in query.lower() or "объяснение" in query.lower():
-        return random.choice([
+    try:
+        if "погода" in query.lower():
+            response = requests.get("https://api.openweathermap.org/data/2.5/weather", params={"q": "Moscow", "appid": "your_weather_api_key", "units": "metric"})
+            weather = response.json()
+            return random.choice([
+                "Погода может быть непредсказуемой, но я постараюсь уточнить для тебя.",
+                "Сейчас я посмотрю прогноз... дай мне секундочку!",
+                "Хочешь знать, тепло ли сегодня? Я проверю!",
+                "Похоже, сегодня лучше взять зонт. Но я уточню!",
+                "Думаю, погода сегодня будет отличной для прогулки. Сейчас уточню."
+            ])
+        elif "новости" in query.lower():
+            response = requests.get("https://newsapi.org/v2/top-headlines", params={"country": "ru", "apiKey": "your_newsapi_key"})
+            news = response.json()
+            return random.choice([
+                "Мир не стоит на месте. Сейчас я найду что-то интересное для тебя.",
+                "Давай посмотрим, что происходит вокруг. Новости уже на подходе!",
+                "Я люблю узнавать новое. Сейчас поделюсь с тобой свежими новостями!",
+                "Минуточку, посмотрю, что нового в мире.",
+                "В новостях всегда что-то происходит. Хочешь узнать, что именно?"
+            ])
+        elif "определение" in query.lower() or "метод" in query.lower() or "объяснение" in query.lower():
+            return random.choice([
             "Хмм, кажется, это сложное слово. Сейчас попробую объяснить.",
             "У меня есть некоторые идеи. Позволь мне попробовать их сформулировать.",
             "Дай мне минутку, чтобы всё обдумать, и я постараюсь объяснить проще.",
             "Иногда определения могут быть немного путанными, но я попробую.",
             "Может, это звучит сложно, но я уверен, ты всё поймёшь."
-        ])
-    elif "краткое содержание" in query.lower():
-        return random.choice([
-            "Сейчас попробую всё собрать в пару предложений. Немного подожди.",
-            "Я постараюсь сделать краткий пересказ, чтобы тебе было проще понять.",
-            "Иногда сжатие текста — это искусство, но я попробую.",
-            "Минуточку, сейчас я соберу самое важное для тебя.",
-            "Попробую уложиться в несколько строк. Дай мне немного времени."
-        ])
-    else:
-        return random.choice([
-            "Ммм, я постараюсь помочь... но если что-то пойдет не так, просто скажи мне, и я исправлю.",
-            "Ну что ж, давай посмотрим... если что-то будет не так, просто не сердись, я попробую еще раз!"
-        ])
+            ])
+        elif "краткое содержание" in query.lower():
+            return random.choice([
+                "Сейчас попробую всё собрать в пару предложений. Немного подожди.",
+                "Я постараюсь сделать краткий пересказ, чтобы тебе было проще понять.",
+                "Иногда сжатие текста — это искусство, но я попробую.",
+                "Минуточку, сейчас я соберу самое важное для тебя.",
+                "Попробую уложиться в несколько строк. Дай мне немного времени."
+            ])
+        else:
+            return random.choice([
+                "Ммм, я постараюсь помочь... но если что-то пойдет не так, просто скажи мне, и я исправлю.",
+                "Ну что ж, давай посмотрим... если что-то будет не так, просто не сердись, я попробую еще раз!"
+            ])
 def analyze_user_message(query):
     # Фразы для поддержания разговора
     if any(word in query.lower() for word in ["как ты", "что думаешь", "мнение", "интересно"]):
@@ -184,9 +187,6 @@ def speak_text(text):
 # Streamlit интерфейс
 st.title("PersoComp Chatbot")
 
-# История диалога
-dialog_history = st.session_state.get("dialog_history", [])
-
 # Ввод начального диалога
 if "dialog_initialized" not in st.session_state:
     st.session_state.dialog_initialized = False
@@ -219,9 +219,30 @@ if st.session_state.dialog_initialized:
         st.write(f"PersoComp: {bot_response}")
         speak_text(bot_response)
 
-    # Показ истории
-    st.subheader("История диалога:")
-    for entry in dialog_history:
-        st.write(f"Вы: {entry['user']}")
-        if entry["bot"]:
-            st.write(f"PersoComp: {entry['bot']}")
+# Инициализация сессии и диалога
+if 'dialog_history' not in st.session_state:
+    st.session_state.dialog_history = []
+    st.session_state.dialog_initialized = True
+
+# Показ истории
+if st.session_state.dialog_initialized:
+    user_input = st.text_input("Вы: ", key="user_input")
+    if st.button("Отправить"):
+        dialog_history = st.session_state.dialog_history
+        dialog_history.append({"user": user_input, "bot": None})
+
+        # Обработка запроса с определенными ключевыми словами
+        if any(keyword in user_input.lower() for keyword in ["новости", "погода", "определение", "метод"]):
+            bot_response = get_online_data(user_input)
+        else:
+            # Формируем запрос для модели, используя историю диалога
+            prompt = " ".join([f"Вы: {entry['user']} PersoComp: {entry['bot']}" for entry in dialog_history if entry["bot"]])
+            bot_response = generate_response(prompt)
+        
+        # Обновляем историю диалога
+        dialog_history[-1]["bot"] = bot_response
+        st.session_state.dialog_history = dialog_history
+        
+        # Выводим и озвучиваем ответ
+        st.write(f"PersoComp: {bot_response}")
+        speak_text(bot_response)  # Воспроизведение аудио
