@@ -15,7 +15,6 @@ huggingface-hub==0.26.5
 idna==3.10
 Jinja2==3.1.4
 jsonschema==4.23.0
-jsonschema-specifications==2024.10.1
 markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 mdurl==0.1.2
@@ -55,6 +54,6 @@ typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.2.3
 watchdog==6.0.0
-speechrecognition
-pyttsx3
-beautifulsoup4
+speechrecognition==3.10.0
+pyttsx3==2.90
+beautifulsoup4==4.12.2
