@@ -1,25 +1,72 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-import speech_recognition as sr
 import pyttsx3
+from gtts import gTTS
+import os
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 import re
-import random
+import speech_recognition as sr
 
 # Инициализация голосового синтезатора с проверкой доступных движков
 engine = pyttsx3.init()
-
-# Выбор голоса для синтеза (если доступно несколько)
 voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[0].id)  # Замените на нужный индекс голоса
+engine.setProperty('voice', voices[0].id)
 
+def main():
+    # Выбор метода ввода
+    choice = input("Выберите метод ввода (1 для текста, 2 для речи): ")
+
+    if choice == '1':
+        user_input = get_text_input()  # Ввод текста с клавиатуры
+    elif choice == '2':
+        user_input = recognize_speech()  # Голосовой ввод
+    else:
+        print("Неверный выбор.")
+        return
+
+    # Дальше используем введённый текст как обычно
+    print(f"Вы ввели: {user_input}")
+    # Здесь можно передать user_input в дальнейшую обработку, например, в модель для генерации ответа
+
+# Функции для работы с речью
 def text_to_speech(text):
-    """Превращает текст в голос"""
+    """Превращает текст в голос с использованием pyttsx3"""
     engine.say(text)
     engine.runAndWait()
 
+def google_tts(text):
+    """Превращает текст в речь с использованием Google Text-to-Speech (gTTS)"""
+    tts = gTTS(text=text, lang='ru')
+    tts.save("response.mp3")
+    os.system("start response.mp3") 
+
+# Локальное распознавание речи с использованием pocketsphinx
+def recognize_speech():
+    """Распознавание речи с использованием Google Web Speech API на русском языке"""
+    recognizer = sr.Recognizer()
+
+    with sr.Microphone() as source:
+        print("Скажите что-нибудь...")
+        audio = recognizer.listen(source)
+
+        try:
+            # Используем Google Web Speech API для распознавания речи
+            recognized_text = recognizer.recognize_google(audio, language="ru-RU")
+            return recognized_text
+        except sr.UnknownValueError:
+            return "Не удалось распознать речь."
+        except sr.RequestError:
+            return "Ошибка подключения к интернету."
+
+def get_text_input():
+    """Текстовый ввод с клавиатуры"""
+    print("Введите текст:")
+    user_input = input()
+    return user_input
+
+# Функция для веб-скрейпинга
 def web_scrape(query):
     """Веб-скрейпинг для поиска информации"""
     search_url = f"https://duckduckgo.com/html/?q={query}"
@@ -31,18 +78,15 @@ def web_scrape(query):
         return top_result
     return "Результаты не найдены."
 
-def recognize_speech():
-    """Распознавание речи с микрофона"""
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.write("Скажите что-нибудь...")
-        audio = recognizer.listen(source)
-        try:
-            return recognizer.recognize_google(audio, language="ru-RU")
-        except sr.UnknownValueError:
-            return "Ошибка распознавания."
-        except sr.RequestError:
-            return "Ошибка подключения к интернету."
+# Пример использования функции веб-скрейпинга
+def generate_response(user_input):
+    """Пример генерации ответа, который может использовать веб-скрейпинг"""
+    if 'поиск' in user_input.lower():
+        query = user_input.lower().replace('поиск', '').strip()
+        result = web_scrape(query)
+        return f"Я нашёл это: {result}"
+    else:
+        return "Это не поисковый запрос."
 
 # Настройка и инициализация DistilGPT-2
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -227,7 +271,16 @@ if user_input:
         st.error("Не могу понять ваш запрос. Попробуйте спросить по-другому.")
 
 if st.session_state.dialog_initialized:
-    user_input = st.text_input("Введите ваш вопрос:", key="user_input")
+    # Добавляем выбор метода ввода: текст или голос
+    input_method = st.radio("Выберите метод ввода:", ('Текстовый ввод', 'Голосовой ввод'))
+
+    if input_method == 'Текстовый ввод':
+        user_input = st.text_input("Введите ваш вопрос:", key="user_input")
+    elif input_method == 'Голосовой ввод':
+        # Используем функцию для распознавания речи
+        st.button("Распознать речь", on_click=lambda: recognize_speech())
+        user_input = recognize_speech()  # Запуск голосового ввода (замените этот код на реальную логику)
+
     if user_input:
         try:
             validated_input = validate_text(user_input)
@@ -239,6 +292,20 @@ if st.session_state.dialog_initialized:
             text_to_speech(response)
         except ValueError as e:
             st.error(str(e))
+
+# Взаимодействие с пользователем через распознавание речи
+if st.button("Распознать речь"):
+    user_input = recognize_speech()  # Вызов функции для распознавания речи
+    
+    # Если речь распознана корректно
+    if user_input not in ["Ошибка распознавания.", "Ошибка подключения к интернету."]:
+        st.write(f"Распознано: {user_input}")
+        response = generate_response(user_input)  # Генерация ответа на распознанный текст
+        st.text_area("Ответ PersoComp:", value=response, height=100)
+        text_to_speech(response)  # Преобразование текста в речь
+    else:
+        st.error(user_input)  # Вывод ошибки, если не удалось распознать речь
+
 
 # История диалога
 st.subheader("История диалога")
@@ -255,13 +322,3 @@ if st.button("Анализировать"):
         st.write(f"Результат поиска: {result}")
     else:
         st.write("Введите запрос с ключевым словом 'поиск'.")
-
-if st.button("Распознать речь"):
-    speech_query = recognize_speech()
-    if speech_query not in ["Ошибка распознавания.", "Ошибка подключения к интернету."]:
-        st.write(f"Распознано: {speech_query}")
-        response = generate_response(speech_query)
-        st.text_area("Ответ PersoComp:", value=response, height=100)
-        text_to_speech(response)
-    else:
-        st.error(speech_query)
