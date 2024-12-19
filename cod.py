@@ -30,11 +30,17 @@ def main():
     print(f"Вы ввели: {user_input}")
     # Здесь можно передать user_input в дальнейшую обработку, например, в модель для генерации ответа
 
-# Функции для работы с речью
+
+#Функция используется для синтеза речи
 def text_to_speech(text):
-    """Превращает текст в голос с использованием pyttsx3"""
+    """Использует встроенный движок речи Windows (SAPI5)."""
+    engine = pyttsx3.init()  # Инициализация движка
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice', voices[0].id)  # Выбор голосового движка
+
     engine.say(text)
     engine.runAndWait()
+
 
 def google_tts(text):
     """Превращает текст в речь с использованием Google Text-to-Speech (gTTS)"""
