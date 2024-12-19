@@ -2,16 +2,22 @@
 
 import streamlit as st
 import requests
-from bs4 import BeautifulSoup
+from bs4 
+import BeautifulSoup
 import speech_recognition as sr
 import pyttsx3
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers 
+import AutoModelForCausalLM, AutoTokenizer
 import torch
-import os
 import re
 
-# Инициализация голосового синтезатора
+# Инициализация голосового синтезатора с проверкой доступных движков
 engine = pyttsx3.init()
+
+# Выбор голоса для синтеза (если доступно несколько)
+voices = engine.getProperty('voices')
+engine.setProperty('voice', voices[0].id)  # Замените на нужный индекс голоса
+
 
 def text_to_speech(text):
     """Превращает текст в голос"""
@@ -112,13 +118,17 @@ def generate_response(prompt):
     outputs = model.generate(inputs, max_length=100, num_return_sequences=1, pad_token_id=tokenizer.eos_token_id)
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return response
-
 # Функция для получения данных из интернета
 def get_online_data(query):
     try:
         if "погода" in query.lower():
-            response = requests.get("https://api.openweathermap.org/data/2.5/weather", params={"q": "Moscow", "appid": "your_weather_api_key", "units": "metric"})
-            weather = response.json()
+            # Пример API для получения данных о погоде
+            weather_api_key = "YOUR_API_KEY"  # Замените на свой ключ
+            response = requests.get(
+                "https://api.openweathermap.org/data/2.5/weather",
+                params={"q": "Moscow", "appid": weather_api_key, "units": "metric"}
+            )
+
             return random.choice([
                 "Погода может быть непредсказуемой, но я постараюсь уточнить для тебя.",
                 "Сейчас я посмотрю прогноз... дай мне секундочку!",
@@ -127,8 +137,14 @@ def get_online_data(query):
                 "Думаю, погода сегодня будет отличной для прогулки. Сейчас уточню."
             ])
         elif "новости" in query.lower():
-            response = requests.get("https://newsapi.org/v2/top-headlines", params={"country": "ru", "apiKey": "your_newsapi_key"})
-            news = response.json()
+            # Пример API для получения новостей
+            news_api_key = "YOUR_API_KEY"  # Замените на свой ключ
+            
+            response = requests.get(
+                "https://newsapi.org/v2/top-headlines",
+                params={"country": "ru", "apiKey": news_api_key}
+            )
+
             return random.choice([
                 "Мир не стоит на месте. Сейчас я найду что-то интересное для тебя.",
                 "Давай посмотрим, что происходит вокруг. Новости уже на подходе!",
@@ -217,8 +233,10 @@ if st.session_state.dialog_initialized:
         try:
             validated_input = validate_text(user_input)
             check_text_length(validated_input)
+            # Добавим проверку на пустую историю
             history = "\n".join([f"Вы: {entry['user']}\nPersoComp: {entry['bot']}" for entry in st.session_state.dialog_history if entry["bot"]])
-            response = generate_response(validated_input)
+            # Передаем в generate_response только проверенный ввод или историю
+            response = generate_response(history + f"\nВы: {validated_input}\nPersoComp: ")
             st.session_state.dialog_history.append({"user": user_input, "bot": response})
             st.text_area("Ответ PersoComp:", value=response, height=100)
             text_to_speech(response)
