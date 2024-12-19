@@ -135,8 +135,6 @@ def get_online_data(query):
     except Exception as e:
         return f"Ошибка получения данных: {str(e)}"
 
-import requests
-
 # Функция для получения данных о погоде
 def get_weather(city_name):
     api_key = "ваш_ключ_API_для_погоды"  # Замените на свой ключ API
