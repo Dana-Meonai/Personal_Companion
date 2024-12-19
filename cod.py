@@ -270,17 +270,20 @@ if user_input:
     else:
         st.error("Не могу понять ваш запрос. Попробуйте спросить по-другому.")
 
+# Использование метода ввода
 if st.session_state.dialog_initialized:
-    # Добавляем выбор метода ввода: текст или голос
     input_method = st.radio("Выберите метод ввода:", ('Текстовый ввод', 'Голосовой ввод'))
 
+    # Обработка текстового ввода
     if input_method == 'Текстовый ввод':
         user_input = st.text_input("Введите ваш вопрос:", key="user_input")
-    elif input_method == 'Голосовой ввод':
-        # Используем функцию для распознавания речи
-        st.button("Распознать речь", on_click=lambda: recognize_speech())
-        user_input = recognize_speech()  # Запуск голосового ввода (замените этот код на реальную логику)
 
+    # Обработка голосового ввода
+    elif input_method == 'Голосовой ввод':
+        if st.button("Распознать речь"):
+            user_input = recognize_speech()  # Запуск голосового ввода
+
+    # Проверка и обработка текста
     if user_input:
         try:
             validated_input = validate_text(user_input)
@@ -292,6 +295,7 @@ if st.session_state.dialog_initialized:
             text_to_speech(response)
         except ValueError as e:
             st.error(str(e))
+
 
 # Взаимодействие с пользователем через распознавание речи
 if st.button("Распознать речь"):
