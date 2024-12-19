@@ -33,13 +33,11 @@ def main():
 
 #Функция используется для синтеза речи
 def text_to_speech(text):
-    """Использует встроенный движок речи Windows (SAPI5)."""
-    engine = pyttsx3.init()  # Инициализация движка
-    voices = engine.getProperty('voices')
-    engine.setProperty('voice', voices[0].id)  # Выбор голосового движка
+    """Использует Google TTS для синтеза речи"""
+    tts = gTTS(text=text, lang='ru')
+    tts.save("response.mp3")
+    os.system("start response.mp3")  # В Windows запускает MP3 файл для воспроизведения
 
-    engine.say(text)
-    engine.runAndWait()
 
 
 def google_tts(text):
