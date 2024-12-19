@@ -1,15 +1,12 @@
-# Основной файл приложения Streamlit
-
 import streamlit as st
 import requests
-from bs4 
-import BeautifulSoup
+from bs4 import BeautifulSoup
 import speech_recognition as sr
 import pyttsx3
-from transformers 
-import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 import re
+import random
 
 # Инициализация голосового синтезатора с проверкой доступных движков
 engine = pyttsx3.init()
@@ -17,7 +14,6 @@ engine = pyttsx3.init()
 # Выбор голоса для синтеза (если доступно несколько)
 voices = engine.getProperty('voices')
 engine.setProperty('voice', voices[0].id)  # Замените на нужный индекс голоса
-
 
 def text_to_speech(text):
     """Превращает текст в голос"""
@@ -93,42 +89,11 @@ def check_text_length(text, max_length=1000):
         raise ValueError("Текст превышает допустимую длину.")
     return text
 
-# Добавьте фразы для начального диалога
-initial_phrases = [
-    "Вы: Привет\nPersoComp: Привет! Как я могу вам помочь?",
-    "Вы: Как дела?\nPersoComp: Всё отлично! А у вас?",
-    "Вы: Что ты умеешь?\nPersoComp: Я могу поддерживать беседу, отвечать на вопросы и искать информацию."
-]
-
-def generate_response(prompt):
-    """Генерация ответа с помощью локальной модели или предустановленных фраз"""
-    predefined_responses = {
-        "Как тебя зовут?": "Меня зовут PersoComp.",
-        "Что ты можешь?": "Я могу поддерживать диалог, искать информацию в интернете и преобразовывать текст в речь.",
-        "Как дела?": "Всё хорошо, спасибо, что спросили!"
-    }
-
-    # Проверка на предустановленные ответы
-    for question, answer in predefined_responses.items():
-        if question in prompt:
-            return answer
-
-    # Если нет предустановленного ответа, используем модель
-    inputs = tokenizer.encode(prompt, return_tensors="pt").to(device)
-    outputs = model.generate(inputs, max_length=100, num_return_sequences=1, pad_token_id=tokenizer.eos_token_id)
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return response
-# Функция для получения данных из интернета
+# Использование бесплатных решений для погоды и новостей (например, без API-ключей)
 def get_online_data(query):
     try:
         if "погода" in query.lower():
-            # Пример API для получения данных о погоде
-            weather_api_key = "YOUR_API_KEY"  # Замените на свой ключ
-            response = requests.get(
-                "https://api.openweathermap.org/data/2.5/weather",
-                params={"q": "Moscow", "appid": weather_api_key, "units": "metric"}
-            )
-
+            # Пример получения данных о погоде без использования API
             return random.choice([
                 "Погода может быть непредсказуемой, но я постараюсь уточнить для тебя.",
                 "Сейчас я посмотрю прогноз... дай мне секундочку!",
@@ -137,28 +102,13 @@ def get_online_data(query):
                 "Думаю, погода сегодня будет отличной для прогулки. Сейчас уточню."
             ])
         elif "новости" in query.lower():
-            # Пример API для получения новостей
-            news_api_key = "YOUR_API_KEY"  # Замените на свой ключ
-            
-            response = requests.get(
-                "https://newsapi.org/v2/top-headlines",
-                params={"country": "ru", "apiKey": news_api_key}
-            )
-
+            # Пример получения новостей без использования API
             return random.choice([
                 "Мир не стоит на месте. Сейчас я найду что-то интересное для тебя.",
                 "Давай посмотрим, что происходит вокруг. Новости уже на подходе!",
                 "Я люблю узнавать новое. Сейчас поделюсь с тобой свежими новостями!",
                 "Минуточку, посмотрю, что нового в мире.",
                 "В новостях всегда что-то происходит. Хочешь узнать, что именно?"
-            ])
-        elif "определение" in query.lower() or "метод" in query.lower() or "объяснение" in query.lower():
-            return random.choice([
-            "Хмм, кажется, это сложное слово. Сейчас попробую объяснить.",
-            "У меня есть некоторые идеи. Позволь мне попробовать их сформулировать.",
-            "Дай мне минутку, чтобы всё обдумать, и я постараюсь объяснить проще.",
-            "Иногда определения могут быть немного путанными, но я попробую.",
-            "Может, это звучит сложно, но я уверен, ты всё поймёшь."
             ])
         elif "краткое содержание" in query.lower():
             return random.choice([
@@ -168,17 +118,57 @@ def get_online_data(query):
                 "Минуточку, сейчас я соберу самое важное для тебя.",
                 "Попробую уложиться в несколько строк. Дай мне немного времени."
             ])
+        elif "определение" in query.lower() or "метод" in query.lower() or "объяснение" in query.lower():
+            return random.choice([
+                "Хмм, кажется, это сложное слово. Сейчас попробую объяснить.",
+                "У меня есть некоторые идеи. Позволь мне попробовать их сформулировать.",
+                "Дай мне минутку, чтобы всё обдумать, и я постараюсь объяснить проще.",
+                "Иногда определения могут быть немного путанными, но я попробую.",
+                "Может, это звучит сложно, но я уверен, ты всё поймёшь."
+            ])
         else:
             return random.choice([
                 "Ммм, я постараюсь помочь... но если что-то пойдет не так, просто скажи мне, и я исправлю.",
                 "Ну что ж, давай посмотрим... если что-то будет не так, просто не сердись, я попробую еще раз!"
             ])
+        
+    except Exception as e:
+        return f"Ошибка получения данных: {str(e)}"
 
-# Функция для анализа сообщения пользователя
+import requests
+
+# Функция для получения данных о погоде
+def get_weather(city_name):
+    api_key = "ваш_ключ_API_для_погоды"  # Замените на свой ключ API
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={api_key}&units=metric&lang=ru"
+    response = requests.get(url)
+    
+    # Проверка успешности запроса
+    if response.status_code == 200:
+        data = response.json()
+        weather = data["main"]
+        temperature = weather["temp"]
+        description = data["weather"][0]["description"]
+        return f"Температура в {city_name}: {temperature}°C, {description}."
+    else:
+        return "Не удалось получить данные о погоде. Возможно, превышен лимит запросов."
+
+# Обновлённая функция для анализа сообщения пользователя
 def analyze_user_message(query):
     try:
+        # Фразы для получения информации о погоде
+        if "погода" in query.lower():
+            # Извлекаем название города из запроса (например, "погода в Москве")
+            match = re.search(r"погода в (\w+)", query.lower())
+            if match:
+                city_name = match.group(1)
+                weather_info = get_weather(city_name)
+                return weather_info
+            else:
+                return "Не могу распознать название города. Уточните, пожалуйста."
+
         # Фразы для поддержания разговора
-        if any(word in query.lower() for word in ["как ты", "что думаешь", "мнение", "интересно"]):
+        elif any(word in query.lower() for word in ["как ты", "что думаешь", "мнение", "интересно"]):
             return random.choice([
                 "Мне интересно, как ты это видишь... расскажи, пожалуйста, подробнее.",
                 "Это звучит очень вдохновляюще! Как думаешь, смогу ли я когда-нибудь так же мыслить?",
@@ -227,24 +217,16 @@ def analyze_user_message(query):
         # Обработка исключений
         return f"Ошибка обработки запроса: {str(e)}"
 
-if st.session_state.dialog_initialized:
-    user_input = st.text_input("Введите ваш вопрос:", key="user_input")
-    if user_input:
-        try:
-            validated_input = validate_text(user_input)
-            check_text_length(validated_input)
-            # Добавим проверку на пустую историю
-            history = "\n".join([f"Вы: {entry['user']}\nPersoComp: {entry['bot']}" for entry in st.session_state.dialog_history if entry["bot"]])
-            # Передаем в generate_response только проверенный ввод или историю
-            response = generate_response(history + f"\nВы: {validated_input}\nPersoComp: ")
-            st.session_state.dialog_history.append({"user": user_input, "bot": response})
-            st.text_area("Ответ PersoComp:", value=response, height=100)
-            text_to_speech(response)
-        except ValueError as e:
-            st.error(str(e))
-
 # Streamlit интерфейс
 st.title("PersoComp Chatbot")
+
+if user_input:
+    response = analyze_user_message(user_input)
+    if response:
+        st.text_area("Ответ PersoComp:", value=response, height=100)
+        text_to_speech(response)
+    else:
+        st.error("Не могу понять ваш запрос. Попробуйте спросить по-другому.")
 
 if st.session_state.dialog_initialized:
     user_input = st.text_input("Введите ваш вопрос:", key="user_input")
